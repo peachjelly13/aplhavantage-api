@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script> <!-- Date adapter -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        #chart-container {
+            width: 80%;
+            height: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart-container">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <script>
+        
+        fetch('/api/intrdayGraph')
+            .then(response => response.json())
+            .then(data => {
+                const { timeArray, highValue, lowValue } = data;
+
+                
+                const formattedTimeArray = timeArray.map(time => new Date(time).toISOString());
+
+               
+                const ctx = document.getElementById('myChart').getContext('2d');
+                const myChart = new Chart(ctx, {
+                    type: 'line', 
+                    data: {
+                        labels: formattedTimeArray, 
+                        datasets: [
+                            {
+                                label: 'High Value',
+                                data: highValue,
+                                borderColor: 'blue',
+                                fill: false, 
+                                tension: 0.1,
+                            },
+                            {
+                                label: 'Low Value',
+                                data: lowValue,
+                                borderColor: 'red',
+                                fill: false, 
+                                tension: 0.1,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                type: 'time', 
+                                time: {
+                                    unit: 'minute', 
+                                    tooltipFormat: 'yyyy-MM-dd HH:mm', 
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time',
+                                },
+                            },
+                            y: {
+                                ticks: {
+                                    beginAtZero: false,
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Value',
+                                },
+                            },
+                        },
+                    },
+                });
+            })
+            .catch(error => console.error('Error fetching chart data:', error));
+    </script>
+</body>
+</html>

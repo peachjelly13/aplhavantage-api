@@ -3,12 +3,13 @@ import fs from 'fs';
 dotenv.config();  
 import { function_, symbol_, interval } from './constant.js';
 import apiClient from './app.js';
-import { timeStamp } from 'console';
+import express from "express";
+const app = express();
+app.use(express.static('../public'));
 
 const API_KEY = process.env.api_key;
 const fetchStockData = async (function_, symbol_, interval, API_KEY) => {
   try {
-    console.log('API_KEY:', API_KEY);  
     const response = await apiClient('', {  
       params: {
         function: function_,
@@ -24,7 +25,7 @@ const fetchStockData = async (function_, symbol_, interval, API_KEY) => {
   }
 };
 
-(async()=>{
+app.get('/api/intrdayGraph',async(_,res)=>{
     try {
         const OBJ = await fetchStockData(function_, symbol_, interval, API_KEY);
         const keys = OBJ["Time Series (5min)"]
@@ -35,24 +36,32 @@ const fetchStockData = async (function_, symbol_, interval, API_KEY) => {
              timestamp:timestamp,
              ...data
         }))
-        const highValues = formattedData.map((items)=>({
+        const Values = formattedData.map((items)=>({
             timeStamp:items["timestamp"],
-            highValue:items["2. high"]
+            highValue:items["2. high"],
+            lowValue:items["3. low"]
         }))
-        const timeArray = highValues.map(item=>item.timeStamp);
-        const highValue = highValues.map(item=>item.highValue);
-        console.log(timeArray);
-        console.log(highValue);
-        if(formattedData){
-            fs.writeFileSync('output.json',JSON.stringify(formattedData))
+        const timeArray = Values.map(item=>item.timeStamp);
+        const highValue = Values.map(item=>item.highValue);
+        const lowValue = Values.map(item=>item.lowValue);
+        res.status(200).json({
+            timeArray,
+            highValue,
+            lowValue
+        })
+        fs.writeFileSync('output.json',JSON.stringify(formattedData))
+        fs.writeFileSync('outputValues.json',JSON.stringify(Values))
         }
-        if(highValues){
-            fs.writeFileSync('outputHighValues.json',JSON.stringify(highValues))
-        }}
+        else{
+            res.status(400).json({message:"No data found"})
+        }
         } catch (error) {
         console.log("Error occurred",error)
         
         }
-})();
+});
 
 
+app.listen(8000,()=>{
+    console.log(`Server is running at port ${8000}`)
+})
