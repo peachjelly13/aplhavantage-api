@@ -10,7 +10,7 @@ app.use(express.static('../public'));
 const API_KEY = process.env.api_key;
 const fetchStockData = async (function_, symbol_, interval, API_KEY) => {
   try {
-    const response = await apiClient('', {  
+    const response = await apiClient.get('', {  
       params: {
         function: function_,
         symbol: symbol_,
@@ -20,6 +20,7 @@ const fetchStockData = async (function_, symbol_, interval, API_KEY) => {
     });
     console.log("Data received",response.data);
     return response.data;
+   
   } catch (error) {
     console.log('Error returning data', error); 
   }
@@ -29,13 +30,14 @@ app.get('/api/intrdayGraph',async(_,res)=>{
     try {
         const OBJ = await fetchStockData(function_, symbol_, interval, API_KEY);
         const keys = OBJ["Time Series (5min)"]
-        
+        fs.writeFileSync('keys.json',JSON.stringify(keys))
         if(keys){
         const entities = Object.entries(keys);
         const formattedData = entities.map(([timestamp,data])=>({
              timestamp:timestamp,
              ...data
         }))
+        
         const Values = formattedData.map((items)=>({
             timeStamp:items["timestamp"],
             highValue:items["2. high"],
@@ -44,6 +46,8 @@ app.get('/api/intrdayGraph',async(_,res)=>{
         const timeArray = Values.map(item=>item.timeStamp);
         const highValue = Values.map(item=>item.highValue);
         const lowValue = Values.map(item=>item.lowValue);
+        console.log(Values)
+        fs.writeFileSync('highValue.json',JSON.stringify(highValue))
         res.status(200).json({
             timeArray,
             highValue,
