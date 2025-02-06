@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Trends</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        #chart-container {
+            width: 80%;
+            margin: auto;
+        }
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .bullish {
+            background-color: #c8e6c9; /* Light Green */
+            color: #2e7d32; /* Dark Green */
+            font-weight: bold;
+        }
+        .bearish {
+            background-color: #ffcdd2; /* Light Red */
+            color: #c62828; /* Dark Red */
+            font-weight: bold;
+        }
+        .neutral {
+            background-color: #eeeeee; /* Light Gray */
+            color: #616161; /* Dark Gray */
+            font-weight: bold;
+        }
+        #max-trend {
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>📈 Stock Trends</h1>
+    <p><strong>Most Common Trend:</strong> <span id="max-trend"></span></p>
+
+    <div id="chart-container">
+        <canvas id="stockChart"></canvas>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Open</th>
+                <th>Close</th>
+                <th>Trend</th>
+            </tr>
+        </thead>
+        <tbody id="stock-table"></tbody>
+    </table>
+
+    <script>
+        async function fetchStockData() {
+            try {
+                const response = await fetch('/api/daily/trends');
+                const data = await response.json();
+
+                // Update max trend
+                const maxTrendElement = document.getElementById('max-trend');
+                maxTrendElement.innerText = data.max_value_trend;
+
+                // Change color based on trend type
+                if (data.max_value_trend.includes("Bullish")) {
+                    maxTrendElement.style.color = "green";
+                } else if (data.max_value_trend.includes("Bearish")) {
+                    maxTrendElement.style.color = "red";
+                } else {
+                    maxTrendElement.style.color = "gray";
+                }
+
+                // Populate table with colors based on trends
+                const tableBody = document.getElementById('stock-table');
+                tableBody.innerHTML = data.trends.map(trend => {
+                    let trendClass = "";
+                    if (trend.trend.includes("Bullish")) {
+                        trendClass = "bullish"; // Green for uptrend
+                    } else if (trend.trend.includes("Bearish")) {
+                        trendClass = "bearish"; // Red for downtrend
+                    } else {
+                        trendClass = "neutral"; // Gray for neutral
+                    }
+                    return `
+                        <tr class="${trendClass}">
+                            <td>${trend.datestamp}</td>
+                            <td>${trend.open}</td>
+                            <td>${trend.close}</td>
+                            <td>${trend.trend}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Prepare chart data
+                const labels = data.trends.map(t => t.datestamp).reverse();
+                const openPrices = data.trends.map(t => parseFloat(t.open)).reverse();
+                const closePrices = data.trends.map(t => parseFloat(t.close)).reverse();
+                const trendColors = data.trends.map(t => 
+                    t.trend.includes("Bullish") ? "green" : 
+                    t.trend.includes("Bearish") ? "red" : "gray"
+                ).reverse();
+
+                // Draw chart
+                const ctx = document.getElementById('stockChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [
+                            {
+                                label: 'Open Price',
+                                data: openPrices,
+                                borderColor: trendColors, 
+                                fill: false,
+                                pointBackgroundColor: trendColors, 
+                                pointRadius: 4,
+                            },
+                            {
+                                label: 'Close Price',
+                                data: closePrices,
+                                borderColor: trendColors, 
+                                fill: false,
+                                pointBackgroundColor: trendColors, 
+                                pointRadius: 4,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { title: { display: true, text: 'Date' } },
+                            y: { title: { display: true, text: 'Price' } }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+            }
+        }
+
+        fetchStockData();
+    </script>
+</body>
+</html>
