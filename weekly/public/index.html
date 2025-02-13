@@ -25,8 +25,8 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            max-width: 600px;
+            width: 90%;
+            max-width: 800px;
         }
 
         h1 {
@@ -36,7 +36,7 @@
 
         button {
             display: block;
-            margin: 0 auto;
+            margin: 0 auto 20px;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -54,12 +54,33 @@
             margin-top: 20px;
         }
 
-        ul {
-            list-style-type: none;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
         }
 
-        li {
-            margin-bottom: 10px;
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .bullish {
+            background-color: #d4edda;
+        }
+
+        .bearish {
+            background-color: #f8d7da;
+        }
+
+        .neutral {
+            background-color: #fff3cd;
         }
     </style>
 </head>
@@ -91,14 +112,41 @@
                 return;
             }
 
-            const list = document.createElement('ul');
-            patterns.forEach(pattern => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `${pattern.pattern} detected on week: ${pattern.week}`;
-                list.appendChild(listItem);
+            const groupedPatterns = {};
+            
+            patterns.forEach(({ pattern, week }) => {
+                const year = week.split('-')[0];
+                if (!groupedPatterns[year]) {
+                    groupedPatterns[year] = [];
+                }
+                groupedPatterns[year].push({ pattern, week });
             });
+            
+            Object.keys(groupedPatterns).sort((a, b) => b - a).forEach(year => {
+                const yearTitle = document.createElement('h2');
+                yearTitle.textContent = year;
+                patternsContainer.appendChild(yearTitle);
 
-            patternsContainer.appendChild(list);
+                const table = document.createElement('table');
+                table.innerHTML = '<tr><th>Pattern</th><th>Week</th></tr>';
+                
+                groupedPatterns[year].forEach(({ pattern, week }) => {
+                    const row = document.createElement('tr');
+                    let rowClass = '';
+                    if (pattern.includes('Bullish')) {
+                        rowClass = 'bullish';
+                    } else if (pattern.includes('Bearish')) {
+                        rowClass = 'bearish';
+                    } else {
+                        rowClass = 'neutral';
+                    }
+                    row.className = rowClass;
+                    row.innerHTML = `<td>${pattern}</td><td>${week}</td>`;
+                    table.appendChild(row);
+                });
+                
+                patternsContainer.appendChild(table);
+            });
         }
     </script>
 </body>
