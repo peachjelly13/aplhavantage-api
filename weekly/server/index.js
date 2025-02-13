@@ -1,62 +1,103 @@
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 dotenv.config();
 import app from "./app.js";
-import { function_,datatype,symbol } from "./constants.js";
-import express from "express"
-import axios from "axios"
-import { fontString } from "chart.js/helpers";
-import fs from "fs"
-import { timeStamp } from "console";
+import { function_, datatype, symbol } from "./constants.js";
+import express from "express";
+import axios from "axios";
+import fs from "fs";
+import { bearishEngulfing, shootingStar, eveningStar } from "./functions/bearish_patterns.js";
+import { bullishEngulfing, morningStar, hammer } from "./functions/bullish_reversal_patterns.js";
 
-const API_KEY = process.env.api_key
+const API_KEY = process.env.api_key;
 
 app.use(express.static("../public"));
 const apiClient = axios.create({
-    baseURL:"https://www.alphavantage.co/query",
+    baseURL: "https://www.alphavantage.co/query",
+});
 
-})
-
-const fetchStockData = async(function_,datatype,symbol,API_KEY)=>{
+const fetchStockData = async (function_, datatype, symbol, API_KEY) => {
     try {
-        const response = await apiClient.get('',{
-            params:{
-                function:function_,
-                datatype:datatype,
-                symbol:symbol,
-                apikey:API_KEY
+        const response = await apiClient.get('', {
+            params: {
+                function: function_,
+                datatype: datatype,
+                symbol: symbol,
+                apikey: API_KEY
             }
-        })
-        return response.data
+        });
+        
+        return response.data;
     } catch (error) {
-        console.log(error)
+        console.error("Error fetching stock data:", error);
+        return null;
+    }
+};
+fetchStockData(function_, datatype, symbol, API_KEY);
+app.get('/api/CandleStickPatterns', async (_, res) => {
+    try {
+        const stockData = await fetchStockData(function_, datatype, symbol, API_KEY);
+    
+        if (!stockData || !stockData["Weekly Time Series"]) {
+            return res.status(500).json({ error: "Failed to fetch stock data" });
+        }
+    
+        const usefulStockData = stockData["Weekly Time Series"];
+        const Values = Object.entries(usefulStockData).map(([timeStamp, data]) => ({
+            timeStamp: timeStamp,
+            ...data
+        }));
+    
+        const mappedValues = Values.map(items => ({
+            timeStamp: items["timeStamp"],
+            open: parseFloat(items["1. open"]),
+            high: parseFloat(items["2. high"]),
+            low: parseFloat(items["3. low"]),
+            close: parseFloat(items["4. close"]),
+            volume: parseFloat(items["5. volume"])
+        }));
+    
+        const detectedPatterns = [];
+    
+        for (let i = 1; i < mappedValues.length; i++) {
+            const current = mappedValues[i];
+            const previous = mappedValues[i - 1];
+    
+            if (bearishEngulfing(current.open, current.close, previous.open, previous.close)) {
+                detectedPatterns.push({ pattern: "Bearish Engulfing", week: current.timeStamp });
+            }
+    
+            if (shootingStar(current.open, current.close, current.high, current.low)) {
+                detectedPatterns.push({ pattern: "Shooting Star", week: current.timeStamp });
+            }
+    
+            if (bullishEngulfing(current.open, current.close, previous.open, previous.close)) {
+                detectedPatterns.push({ pattern: "Bullish Engulfing", week: current.timeStamp });
+            }
+    
+            if (hammer(current.open, current.close, current.high, current.low)) {
+                detectedPatterns.push({ pattern: "Hammer", week: current.timeStamp });
+            }
+    
+            if (i > 1) {
+                const twoWeeksAgo = mappedValues[i - 2];
+    
+                if (morningStar(twoWeeksAgo.open, twoWeeksAgo.close, previous.open, previous.close, current.open, current.close)) {
+                    detectedPatterns.push({ pattern: "Morning Star", week: current.timeStamp });
+                }
+    
+                if (eveningStar(twoWeeksAgo.open, twoWeeksAgo.close, previous.open, previous.close, current.open, current.close)) {
+                    detectedPatterns.push({ pattern: "Evening Star", week: current.timeStamp });
+                }
+            }
+        }
+    
+      
+    
+        res.json({ detectedPatterns });
+    } catch (error) {
+        return res.status(500).json({
+            error:error.message
+        })
         
     }
-}
-
-
-app.get('/api/CandleStickPatterns',async(__,res)=>{
-    const stockData = await fetchStockData(function_,datatype,symbol,API_KEY);
-    const usefulStockData = stockData["Weekly Time Series"];
-    const Values = Object.entries(usefulStockData).map(([timeStamp,data])=>({
-        timeStamp:timeStamp,
-        ...data
-    }))
-    const mappedValues = Values.map((items)=>({
-        timeStamp:items["timeStamp"],
-        open:items["1. open"],
-        high:items["2. high"],
-        low:items["3. low"],
-        close:items["4. close"],
-        volume:items["5. volume"]
-    }))
-    const timeStampArray = mappedValues.map(item=>item.timeStamp);
-    const openArray = mappedValues.map(item=>item.open);
-    const highArray = mappedValues.map(item=>item.high);
-    const lowArray = mappedValues.map(item=>item.low);
-    const closeArray = mappedValues.map(item=>item.close)
-    const volumeArray = mappedValues.map(item=>item.volume);
-
-    fs.writeFileSync("output.json",JSON.stringify(openArray))
-    
-})
-
+});

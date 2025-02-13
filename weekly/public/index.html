@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candlestick Patterns</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .patterns-container {
+            margin-top: 20px;
+        }
+
+        ul {
+            list-style-type: none;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Candlestick Patterns Detector</h1>
+        <button id="loadPatternsButton">Load Patterns</button>
+        <div id="patternsContainer" class="patterns-container"></div>
+    </div>
+
+    <script>
+        document.getElementById('loadPatternsButton').addEventListener('click', async () => {
+            const response = await fetch('/api/CandleStickPatterns');
+            const data = await response.json();
+
+            if (data.detectedPatterns) {
+                displayPatterns(data.detectedPatterns);
+            } else {
+                alert("No patterns detected or an error occurred.");
+            }
+        });
+
+        function displayPatterns(patterns) {
+            const patternsContainer = document.getElementById('patternsContainer');
+            patternsContainer.innerHTML = ''; // Clear previous results
+
+            if (patterns.length === 0) {
+                patternsContainer.innerHTML = '<p>No candlestick patterns detected in the given data.</p>';
+                return;
+            }
+
+            const list = document.createElement('ul');
+            patterns.forEach(pattern => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${pattern.pattern} detected on week: ${pattern.week}`;
+                list.appendChild(listItem);
+            });
+
+            patternsContainer.appendChild(list);
+        }
+    </script>
+</body>
+</html>

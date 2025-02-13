@@ -32,3 +32,7 @@ const eveningStar = (
         thirdClose < firstOpen            
     );
 };
+
+export{
+    bearishEngulfing,shootingStar,eveningStar
+}
